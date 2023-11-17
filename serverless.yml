@@ -1,0 +1,108 @@
+service: user-management-flask-api
+
+plugins:
+  - serverless-python-requirements
+  - serverless-wsgi
+
+	
+custom:
+  tableName: 'users-table-${self:provider.stage}'
+  wsgi:
+    app: app.app
+    packRequirements: false
+  pythonRequirements:
+    dockerizePip: non-linux
+
+provider:
+  name: aws
+  runtime: python3.10
+  stage: dev
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource:
+        - { "Fn::GetAtt": ["UsersTable", "Arn" ] }
+  environment:
+    USERS_TABLE: ${self:custom.tableName}
+
+functions:
+  app:
+    handler: wsgi_handler.handler
+    events:
+      - http: ANY /
+#      - http: 'ANY {proxy+}'
+  createUser:
+    handler: wsgi_handler.handler
+    events:
+      - http: 'POST /users/create'
+  getUserById:
+    handler: wsgi_handler.handler
+    events:
+      - http: 'GET /users/{proxy+}'
+
+
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableName}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: firstname
+            AttributeType: S
+          - AttributeName: lastname
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+          - AttributeName: password
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+        GlobalSecondaryIndexes:
+          - IndexName: FirstNameIndex
+            KeySchema:
+              - AttributeName: firstname
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          - IndexName: LastNameIndex
+            KeySchema:
+              - AttributeName: lastname
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          - IndexName: EmailIndex
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          - IndexName: PasswordIndex
+            KeySchema:
+              - AttributeName: password
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
