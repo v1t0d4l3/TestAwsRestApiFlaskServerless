@@ -20,13 +20,13 @@ def hello():
 @app.route('/users/create', methods=['POST'])
 def createUser():
     try:
-        # recupero il body
+        # retrieve body
         data = request.get_json()
 
-        # genero un hash del timestamp corrente da usare come id
+        # generating current timestamp hash. will be used as ID
         next_id = hashlib.sha1(str(int(time.time() * 1000)).encode()).hexdigest() 
 
-        # salvo il record
+        # save new user
         table.put_item(
             Item={
                 'id': next_id,
@@ -47,7 +47,7 @@ def createUser():
 def getUserById(user_id):
 
     try:
-        # recupero l'utente
+        # retrieve user
         result = table.get_item(
             Key={
                 'id': user_id
@@ -57,11 +57,11 @@ def getUserById(user_id):
     except ClientError as e:
         return jsonify({'error': str(e)}), 500
 
-    # utente non trovato
+    # user not found response
     if not item:
         return jsonify({'error': 'User not found'}), 404
 
     
-    item.pop('password') # rimuovo la password dai dati
+    item.pop('password') # removing password hash for security reasons
 
     return jsonify(item), 200
